@@ -64,3 +64,70 @@ const init = async () => {
 };
 
 init();
+
+// GET all employees
+app.get('/api/employees', async (req, res) => {
+    try {
+        const { rows } = await client.query('SELECT * FROM employees');
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET all departments
+app.get('/api/departments', async (req, res) => {
+    try {
+        const { rows } = await client.query('SELECT * FROM departments');
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST a new employee
+app.post('/api/employees', async (req, res) => {
+    try {
+        const { name, department_id } = req.body; // Assuming each employee belongs to a department
+        const { rows } = await client.query('INSERT INTO employees (name, department_id) VALUES ($1, $2) RETURNING *', [name, department_id]);
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// DELETE an employee by id
+app.delete('/api/employees/:id', async (req, res) => {
+    try {
+        await client.query('DELETE FROM employees WHERE id = $1', [req.params.id]);
+        res.status(204).send();
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// PUT (update) an employee by id
+app.put('/api/employees/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, department_id } = req.body;
+        const { rows } = await client.query('UPDATE employees SET name = $1, department_id = $2 WHERE id = $3 RETURNING *', [name, department_id, id]);
+        if (rows.length === 0) {
+            return res.status(404).send('Employee not found');
+        }
+        res.json(rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Error handling route
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Internal server error' });
+});
